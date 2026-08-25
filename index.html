@@ -130,9 +130,9 @@ canvas#cv{display:block;width:100%;height:auto;background:#12395C}
   font-size:15px;color:#04202F;box-shadow:0 6px 0 #0E5A87}
 .bomb:active{transform:translateY(4px);box-shadow:0 2px 0 #0E5A87}
 .rcol{display:flex;flex-direction:column;align-items:center;gap:9px}
-.nbtn{width:86px;padding:9px 0;border-radius:999px;text-align:center;
-  background:radial-gradient(circle at 34% 30%,#FFD3EA,#F06FAE);border:2px solid #FFD3EA;
-  color:#4A1030;font-size:14px;box-shadow:0 4px 0 #A93A70;user-select:none}
+.nbtn{min-width:104px;padding:12px 0;border-radius:999px;text-align:center;
+  background:radial-gradient(circle at 34% 30%,#FFD3EA,#F0559E);border:3px solid #fff;
+  color:#4A1030;font-size:16px;box-shadow:0 5px 0 #A93A70,0 6px 14px rgba(0,0,0,.4);user-select:none}
 .nbtn:active{transform:translateY(3px);box-shadow:0 1px 0 #A93A70}
 .nbtn.urgent{animation:npulse .5s infinite alternate}
 @keyframes npulse{from{transform:scale(1)}to{transform:scale(1.14)}}
@@ -144,12 +144,15 @@ body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 input{-webkit-user-select:text;user-select:text}
 .bomb.needle{background:radial-gradient(circle at 34% 30%,#FFD3EA,#E8559B);border-color:#FFD3EA;box-shadow:0 6px 0 #A93A70}
 
+html,body{touch-action:manipulation}
 body{overscroll-behavior:none}
 .stage,#pad,.dk,.bomb{touch-action:none}
 @media (pointer:coarse){
-  #pad.on{position:fixed;left:0;right:0;bottom:0;margin:0;padding:0 12px 12px;
+  #pad.on{position:fixed;left:0;right:0;bottom:0;margin:0;
+    padding:0 12px calc(14px + env(safe-area-inset-bottom, 0px));
     justify-content:space-between;pointer-events:none;z-index:50}
-  #pad .dpad,#pad .rcol{pointer-events:auto;opacity:.6}
+  #pad .dpad{pointer-events:auto;opacity:.6}
+  #pad .rcol{pointer-events:auto;opacity:.85}
   .dpad{grid-template-columns:repeat(3,62px);grid-template-rows:repeat(3,62px);gap:5px}
   .dk{font-size:23px;border-radius:15px}
   .bomb{width:108px;height:108px;font-size:17px}
@@ -230,7 +233,7 @@ body{overscroll-behavior:none}
     <b style="display:inline-block;margin-top:6px">조작</b> 1P <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> <kbd>Space</kbd> · 2P <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <kbd>F</kbd><br>
     물방울에 갇혔을 때 <b>바늘</b>이 있으면 <kbd>Ctrl</kbd>(2P는 <kbd>G</kbd>, 물풍선 키도 됨)로 즉시 탈출. 바늘은 1개 들고 시작하고 필드에서 주울 수 있어요. 없으면 5초 뒤 터집니다. 같은 편은 몸으로 닿으면 구출.
   </div>
-  <p class="foot">그림·음악·코드를 전부 직접 만든 창작 게임입니다.</p>
+  <p class="foot"><span style="opacity:.55">v1.0</span><br>그림·음악·코드를 전부 직접 만든 창작 게임입니다.</p>
 </section>
 
 <section id="game">
@@ -270,7 +273,7 @@ body{overscroll-behavior:none}
     </div>
     <div class="rcol">
       <div class="bomb d" id="bombBtn">물풍선</div>
-      <div class="nbtn d" id="needleBtn">바늘 <span id="ndc">1</span></div>
+      <div class="nbtn d" id="needleBtn">🪡 바늘 <span id="ndc">1</span></div>
     </div>
   </div>
 </section>
@@ -315,10 +318,10 @@ const DL=['up','down','left','right'];
 const OPP={up:'down',down:'up',left:'right',right:'left'};
 
 const CHARS=[
-  {id:'monggle',name:'몽글',face:'chick', c1:'#FFE38A',c2:'#F3B233',b:2,p:2,s:3},
-  {id:'bangul', name:'방울',face:'bunny', c1:'#BFE9FF',c2:'#4FB6E8',b:2,p:1,s:5},
-  {id:'ppogeul',name:'뽀글',face:'bear',  c1:'#FFC3B8',c2:'#E8705E',b:4,p:1,s:2},
-  {id:'dungsil',name:'둥실',face:'cat',   c1:'#D6C6FF',c2:'#8A63E0',b:2,p:3,s:2},
+  {id:'buli',   name:'불이',face:'fire',  c1:'#FFB27A',c2:'#F2622E',b:2,p:3,s:2},
+  {id:'pongpong',name:'퐁퐁',face:'water', c1:'#A8E4FF',c2:'#3E9FE0',b:4,p:1,s:2},
+  {id:'saessak',name:'새싹',face:'grass', c1:'#C8F2A0',c2:'#67B84B',b:2,p:2,s:3},
+  {id:'jjirit', name:'찌릿',face:'elec',  c1:'#FFE97A',c2:'#F2B31E',b:2,p:1,s:5},
 ];
 const MAPTYPES=[
   {id:'field',  name:'허허벌판',  desc:'장애물 거의 없음'},
@@ -341,7 +344,7 @@ const SCORE={worm:100, thorn:300, gold:1000};
 
 let cv,ctx,grid,itemGrid,blastGrid;
 let balloons,blasts,drops,pops,players,mobs;
-let mode='1v1', diff=1, myChar='monggle', myName='', myName2='';
+let mode='1v1', diff=1, myChar='buli', myName='', myName2='';
 let running=false, phase='ready', phaseT=0, clock=0, tick=0, shake=0, ended=false, paused=false, lastSec=-1;
 let teams, spawnTimer, itemTimer, elapsed, perfectT=[0,0], winner=null, winKind='';
 let THORN_EVERY=4;
@@ -647,7 +650,7 @@ function startRound(){
   genMap();
 
   // 봇 캐릭터는 매판 랜덤 — 단, 사람과는 겹치지 않게
-  const ch1=CHARS.find(c=>c.id===myChar);
+  const ch1=CHARS.find(c=>c.id===myChar)||CHARS[0];
   const rest=CHARS.filter(c=>c.id!==myChar);
   for(let i=rest.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [rest[i],rest[j]]=[rest[j],rest[i]]; }
   const n1=(myName.trim()||ch1.name);
@@ -745,6 +748,12 @@ function bindPad(){
   nb.addEventListener('pointerdown',ev=>{ev.preventDefault();
     const p=players&&players.find(x=>x.kind==='human'); if(p)useNeedle(p)});
   nb.addEventListener('contextmenu',ev=>ev.preventDefault());
+  /* 패드·게임판 위에서는 터치 기본동작(더블탭 확대 포함)을 원천 차단 */
+  for(const sel of ['#pad','.stage']){
+    const el=document.querySelector?document.querySelector(sel):null;
+    if(el) for(const t of ['touchstart','touchmove','touchend'])
+      el.addEventListener(t,ev=>ev.preventDefault(),{passive:false});
+  }
   /* 게임 중에는 길게 눌러도 복사·선택 메뉴가 뜨지 않게 */
   document.addEventListener('contextmenu',ev=>{ if(running) ev.preventDefault(); });
   /* 아이폰 더블탭 확대·핀치 확대 차단 */
@@ -1561,18 +1570,15 @@ function drawChar(g,x,y,R,p,dir,bob,bub){
   const hop=bob?Math.abs(Math.sin(bob))*3:0, yy=y-hop;
   g.fillStyle='rgba(0,0,0,.22)';g.beginPath();g.ellipse(x,y+R*.82,R*.78,R*.28,0,0,7);g.fill();
   g.fillStyle=p.c2;
-  if(p.face==='cat'){
-    g.beginPath();g.moveTo(x-R*.7,yy-R*.5);g.lineTo(x-R*.28,yy-R*1.12);g.lineTo(x-R*.08,yy-R*.5);g.closePath();g.fill();
-    g.beginPath();g.moveTo(x+R*.7,yy-R*.5);g.lineTo(x+R*.28,yy-R*1.12);g.lineTo(x+R*.08,yy-R*.5);g.closePath();g.fill();
-  } else if(p.face==='bear'){
+  if(p.face==='fire'){          // 불이: 뾰족 여우 귀
+    g.beginPath();g.moveTo(x-R*.66,yy-R*.42);g.lineTo(x-R*.34,yy-R*1.28);g.lineTo(x-R*.04,yy-R*.5);g.closePath();g.fill();
+    g.beginPath();g.moveTo(x+R*.66,yy-R*.42);g.lineTo(x+R*.34,yy-R*1.28);g.lineTo(x+R*.04,yy-R*.5);g.closePath();g.fill();
+    g.fillStyle=p.c1;
+    g.beginPath();g.moveTo(x-R*.52,yy-R*.5);g.lineTo(x-R*.34,yy-R*1.02);g.lineTo(x-R*.16,yy-R*.52);g.closePath();g.fill();
+    g.beginPath();g.moveTo(x+R*.52,yy-R*.5);g.lineTo(x+R*.34,yy-R*1.02);g.lineTo(x+R*.16,yy-R*.52);g.closePath();g.fill();
+  } else if(p.face==='grass'){  // 새싹: 동글 곰 귀
     g.beginPath();g.arc(x-R*.62,yy-R*.62,R*.3,0,7);g.fill();
     g.beginPath();g.arc(x+R*.62,yy-R*.62,R*.3,0,7);g.fill();
-  } else if(p.face==='bunny'){
-    g.beginPath();g.ellipse(x-R*.34,yy-R*1.05,R*.18,R*.52,-.16,0,7);g.fill();
-    g.beginPath();g.ellipse(x+R*.34,yy-R*1.05,R*.18,R*.52,.16,0,7);g.fill();
-  } else {
-    g.beginPath();g.moveTo(x,yy-R*1.35);g.quadraticCurveTo(x+R*.3,yy-R*.95,x-R*.05,yy-R*.8);
-    g.quadraticCurveTo(x-R*.2,yy-R*1.0,x,yy-R*1.35);g.fill();
   }
   const bg=g.createRadialGradient(x-R*.3,yy-R*.4,R*.15,x,yy,R*1.05);
   bg.addColorStop(0,'#fff');bg.addColorStop(.35,p.c1);bg.addColorStop(1,p.c2);
@@ -1590,18 +1596,94 @@ function drawChar(g,x,y,R,p,dir,bob,bub){
     g.moveTo(x-R*.14+ex,yy-R*.14+ey);g.lineTo(x-R*.46+ex,yy+R*.14+ey);
     g.moveTo(x+R*.14+ex,yy-R*.14+ey);g.lineTo(x+R*.46+ex,yy+R*.14+ey);
     g.moveTo(x+R*.46+ex,yy-R*.14+ey);g.lineTo(x+R*.14+ex,yy+R*.14+ey);g.stroke();
-  } else {
-    g.beginPath();g.ellipse(x-R*.3+ex,yy-R*.05+ey,R*.13,R*.17,0,0,7);g.fill();
-    g.beginPath();g.ellipse(x+R*.3+ex,yy-R*.05+ey,R*.13,R*.17,0,0,7);g.fill();
+  } else if(p.face==='grass'){
+    /* 새싹: 평온하게 감은 반달눈 */
+    g.strokeStyle='#12283A';g.lineWidth=Math.max(1.5,R*.12);g.lineCap='round';
+    g.beginPath();g.arc(x-R*.3+ex,yy+ey,R*.15,Math.PI*1.08,Math.PI*1.92);g.stroke();
+    g.beginPath();g.arc(x+R*.3+ex,yy+ey,R*.15,Math.PI*1.08,Math.PI*1.92);g.stroke();
+    g.lineCap='butt';
+  } else if(p.face==='water'){
+    /* 퐁퐁: 멀뚱멀뚱 왕방울눈 */
+    g.beginPath();g.arc(x-R*.3+ex,yy-R*.08+ey,R*.19,0,7);g.fill();
+    g.beginPath();g.arc(x+R*.3+ex,yy-R*.08+ey,R*.19,0,7);g.fill();
     g.fillStyle='#fff';
-    g.beginPath();g.arc(x-R*.26+ex,yy-R*.11+ey,R*.05,0,7);g.fill();
-    g.beginPath();g.arc(x+R*.34+ex,yy-R*.11+ey,R*.05,0,7);g.fill();
+    g.beginPath();g.arc(x-R*.24+ex,yy-R*.15+ey,R*.075,0,7);g.fill();
+    g.beginPath();g.arc(x+R*.36+ex,yy-R*.15+ey,R*.075,0,7);g.fill();
+  } else if(p.face==='fire'){
+    /* 불이: 또렷한 눈 + 씩씩하게 치켜올린 눈썹 */
+    g.beginPath();g.ellipse(x-R*.3+ex,yy-R*.03+ey,R*.13,R*.16,0,0,7);g.fill();
+    g.beginPath();g.ellipse(x+R*.3+ex,yy-R*.03+ey,R*.13,R*.16,0,0,7);g.fill();
+    g.fillStyle='#fff';
+    g.beginPath();g.arc(x-R*.26+ex,yy-R*.09+ey,R*.05,0,7);g.fill();
+    g.beginPath();g.arc(x+R*.34+ex,yy-R*.09+ey,R*.05,0,7);g.fill();
+    g.strokeStyle='#12283A';g.lineWidth=Math.max(1.4,R*.1);g.lineCap='round';
+    g.beginPath();g.moveTo(x-R*.46+ex,yy-R*.26+ey);g.lineTo(x-R*.16+ex,yy-R*.36+ey);g.stroke();
+    g.beginPath();g.moveTo(x+R*.46+ex,yy-R*.26+ey);g.lineTo(x+R*.16+ex,yy-R*.36+ey);g.stroke();
+    g.lineCap='butt';
+  } else {
+    /* 찌릿: 반짝반짝 눈 (하이라이트 두 개) */
+    g.beginPath();g.ellipse(x-R*.3+ex,yy-R*.05+ey,R*.14,R*.18,0,0,7);g.fill();
+    g.beginPath();g.ellipse(x+R*.3+ex,yy-R*.05+ey,R*.14,R*.18,0,0,7);g.fill();
+    g.fillStyle='#fff';
+    g.beginPath();g.arc(x-R*.25+ex,yy-R*.12+ey,R*.055,0,7);g.fill();
+    g.beginPath();g.arc(x+R*.35+ex,yy-R*.12+ey,R*.055,0,7);g.fill();
+    g.beginPath();g.arc(x-R*.34+ex,yy+R*.01+ey,R*.028,0,7);g.fill();
+    g.beginPath();g.arc(x+R*.26+ex,yy+R*.01+ey,R*.028,0,7);g.fill();
   }
-  g.fillStyle='rgba(255,124,124,.5)';
+  if(p.face==='fire'){          // 이마의 작은 불꽃
+    g.fillStyle='#FF8C2E';
+    g.beginPath();g.moveTo(x,yy-R*1.34);g.quadraticCurveTo(x+R*.26,yy-R*1.02,x,yy-R*.86);
+    g.quadraticCurveTo(x-R*.26,yy-R*1.02,x,yy-R*1.34);g.fill();
+    g.fillStyle='#FFE07A';
+    g.beginPath();g.moveTo(x,yy-R*1.16);g.quadraticCurveTo(x+R*.13,yy-R*1.0,x,yy-R*.9);
+    g.quadraticCurveTo(x-R*.13,yy-R*1.0,x,yy-R*1.16);g.fill();
+  } else if(p.face==='water'){  // 정수리 물방울
+    g.fillStyle=p.c2;
+    g.beginPath();g.moveTo(x,yy-R*1.42);g.quadraticCurveTo(x+R*.3,yy-R*1.0,x,yy-R*.82);
+    g.quadraticCurveTo(x-R*.3,yy-R*1.0,x,yy-R*1.42);g.fill();
+    g.fillStyle='rgba(255,255,255,.8)';
+    g.beginPath();g.arc(x-R*.07,yy-R*1.08,R*.07,0,7);g.fill();
+  } else if(p.face==='grass'){  // 머리 위 새싹 떡잎
+    g.strokeStyle='#4E8F35';g.lineWidth=R*.11;
+    g.beginPath();g.moveTo(x,yy-R*.9);g.lineTo(x,yy-R*1.2);g.stroke();
+    g.fillStyle='#8FDC5C';
+    g.beginPath();g.ellipse(x-R*.24,yy-R*1.3,R*.26,R*.13,-.7,0,7);g.fill();
+    g.beginPath();g.ellipse(x+R*.24,yy-R*1.3,R*.26,R*.13,.7,0,7);g.fill();
+  } else if(p.face==='elec'){   // 번개 볏
+    g.strokeStyle='#E89B12';g.lineWidth=R*.15;g.lineJoin='round';g.lineCap='round';
+    g.beginPath();g.moveTo(x-R*.14,yy-R*.86);g.lineTo(x+R*.06,yy-R*1.18);
+    g.lineTo(x-R*.06,yy-R*1.12);g.lineTo(x+R*.2,yy-R*1.48);g.stroke();
+  }
+  const cheek = p.face==='elec'?'rgba(242,140,60,.6)' : p.face==='fire'?'rgba(255,104,72,.5)' : 'rgba(255,124,124,.5)';
+  g.fillStyle=cheek;
   g.beginPath();g.arc(x-R*.58,yy+R*.26,R*.14,0,7);g.fill();
   g.beginPath();g.arc(x+R*.58,yy+R*.26,R*.14,0,7);g.fill();
-  g.strokeStyle='#12283A';g.lineWidth=Math.max(1,R*.07);
-  g.beginPath();g.arc(x+ex*.6,yy+R*.18+ey,R*.16,.25,Math.PI-.25);g.stroke();
+  if(bub||p.face==='fire'){
+    /* 불이: 한쪽만 올라간 씩- 웃음 + 작은 송곳니 (갇혔을 땐 공통 입) */
+    g.strokeStyle='#12283A';g.lineWidth=Math.max(1,R*.07);
+    if(bub){ g.beginPath();g.arc(x+ex*.6,yy+R*.18+ey,R*.16,.25,Math.PI-.25);g.stroke(); }
+    else{
+      g.beginPath();g.arc(x-R*.06+ex,yy+R*.14+ey,R*.2,.15,Math.PI*.55);g.stroke();
+      g.fillStyle='#fff';
+      g.beginPath();g.moveTo(x+R*.1+ex,yy+R*.26+ey);g.lineTo(x+R*.2+ex,yy+R*.26+ey);
+      g.lineTo(x+R*.15+ex,yy+R*.4+ey);g.closePath();g.fill();
+    }
+  } else if(p.face==='water'){
+    /* 퐁퐁: 넓고 얕은 개구리 미소 */
+    g.strokeStyle='#12283A';g.lineWidth=Math.max(1,R*.07);
+    g.beginPath();g.arc(x+ex*.6,yy+R*.1+ey,R*.3,Math.PI*.15,Math.PI*.85);g.stroke();
+  } else if(p.face==='elec'){
+    /* 찌릿: 입 대신 작은 주황 부리 */
+    g.fillStyle='#F28C1E';
+    g.beginPath();g.moveTo(x-R*.11+ex,yy+R*.14+ey);g.lineTo(x+R*.11+ex,yy+R*.14+ey);
+    g.lineTo(x+ex,yy+R*.32+ey);g.closePath();g.fill();
+    g.strokeStyle='rgba(0,0,0,.25)';g.lineWidth=1;
+    g.beginPath();g.moveTo(x-R*.11+ex,yy+R*.14+ey);g.lineTo(x+R*.11+ex,yy+R*.14+ey);g.stroke();
+  } else {
+    /* 새싹: 잔잔한 작은 미소 */
+    g.strokeStyle='#12283A';g.lineWidth=Math.max(1,R*.07);
+    g.beginPath();g.arc(x+ex*.6,yy+R*.16+ey,R*.12,.35,Math.PI-.35);g.stroke();
+  }
   if(bub) shell(g,x,y,R*1.7);
 }
 function shell(g,x,y,R){
