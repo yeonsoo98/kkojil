@@ -3,12 +3,12 @@
 <meta property="og:title" content="돌아온 꼬질이">
 <meta property="og:description" content="물풍선으로 가두고 몸으로 줍는 꼬질이 소탕전. AI 봇과 1:1, 둘이서 2:2. 폰에서도 바로!">
 <meta name="description" content="물풍선으로 꼬질이를 가두고 몸으로 주워 담는 무료 웹 게임.">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0A1E33">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='34' r='17' fill='%2398E85C'/%3E%3Ccircle cx='44' cy='40' r='11' fill='%235FB233'/%3E%3Ccircle cx='18' cy='30' r='3.5' fill='%2312283A'/%3E%3Ccircle cx='30' cy='30' r='3.5' fill='%2312283A'/%3E%3Cpath d='M16 20 Q12 10 18 8 M30 20 Q34 10 28 8' stroke='%234E9A2A' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>돌아온 꼬질이</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,6 +129,13 @@ canvas#cv{display:block;width:100%;height:auto;background:#12395C}
   background:radial-gradient(circle at 34% 30%,#7FDBFF,#1A82BF);font-family:'Jua',sans-serif;
   font-size:15px;color:#04202F;box-shadow:0 6px 0 #0E5A87}
 .bomb:active{transform:translateY(4px);box-shadow:0 2px 0 #0E5A87}
+.rcol{display:flex;flex-direction:column;align-items:center;gap:9px}
+.nbtn{width:86px;padding:9px 0;border-radius:999px;text-align:center;
+  background:radial-gradient(circle at 34% 30%,#FFD3EA,#F06FAE);border:2px solid #FFD3EA;
+  color:#4A1030;font-size:14px;box-shadow:0 4px 0 #A93A70;user-select:none}
+.nbtn:active{transform:translateY(3px);box-shadow:0 1px 0 #A93A70}
+.nbtn.urgent{animation:npulse .5s infinite alternate}
+@keyframes npulse{from{transform:scale(1)}to{transform:scale(1.14)}}
 .foot{text-align:center;font-size:11px;color:#6E93B0;margin-top:16px;line-height:1.7}
 
 /* ---------- 모바일 ---------- */
@@ -139,13 +146,10 @@ input{-webkit-user-select:text;user-select:text}
 
 body{overscroll-behavior:none}
 .stage,#pad,.dk,.bomb{touch-action:none}
-#rot{display:none;position:fixed;top:0;left:0;right:0;z-index:60;background:rgba(255,206,74,.95);
-  color:#3A1F00;font-weight:800;font-size:13px;text-align:center;padding:8px 12px}
-@media (max-width:880px) and (orientation:portrait){ body.playing #rot{display:block} }
 @media (pointer:coarse){
   #pad.on{position:fixed;left:0;right:0;bottom:0;margin:0;padding:0 12px 12px;
     justify-content:space-between;pointer-events:none;z-index:50}
-  #pad .dpad,#pad .bomb{pointer-events:auto;opacity:.58}
+  #pad .dpad,#pad .rcol{pointer-events:auto;opacity:.6}
   .dpad{grid-template-columns:repeat(3,62px);grid-template-rows:repeat(3,62px);gap:5px}
   .dk{font-size:23px;border-radius:15px}
   .bomb{width:108px;height:108px;font-size:17px}
@@ -229,7 +233,6 @@ body{overscroll-behavior:none}
   <p class="foot">그림·음악·코드를 전부 직접 만든 창작 게임입니다.</p>
 </section>
 
-<div id="rot">📱 가로로 돌리면 맵이 훨씬 크게 보여요</div>
 <section id="game">
   <div class="board">
     <div class="side red" id="sideA">
@@ -265,7 +268,10 @@ body{overscroll-behavior:none}
       <div class="dk" data-dir="left">◀</div><i></i><div class="dk" data-dir="right">▶</div>
       <i></i><div class="dk" data-dir="down">▼</div><i></i>
     </div>
-    <div class="bomb d" id="bombBtn">물풍선</div>
+    <div class="rcol">
+      <div class="bomb d" id="bombBtn">물풍선</div>
+      <div class="nbtn d" id="needleBtn">바늘 <span id="ndc">1</span></div>
+    </div>
   </div>
 </section>
 </div>
@@ -275,10 +281,28 @@ body{overscroll-behavior:none}
 /* ==========================================================
    꼬질이 맵 — 좌우 구역 분할 / 가두고 몸으로 줍기 / 콤보 / 퍼펙트
 ========================================================== */
-const COLS=21, ROWS=15, TILE=44, W=COLS*TILE, H=ROWS*TILE;
-const WALL=10;                      // 가운데 벽
-const ZONE=[{c0:1,c1:9},{c0:11,c1:19}];
-const MIRROR=COLS-1;                // 좌우 대칭 복사용
+const TILE=44;
+let COLS=21, ROWS=15, W=COLS*TILE, H=ROWS*TILE;
+let PORTRAIT=false;
+const WALLPOS=10;                   // 가운데 벽 (가로: 열 / 세로: 행)
+let ZONE=[{c0:1,c1:9,r0:1,r1:13},{c0:11,c1:19,r0:1,r1:13}];
+let SPAWN=[[[1,1],[9,13]],[[19,1],[11,13]]];
+function isWall(c,r){ return PORTRAIT ? r===WALLPOS : c===WALLPOS; }
+function mirrorTile(c,r){ return PORTRAIT ? [c,(ROWS-1)-r] : [(COLS-1)-c,r]; }
+function setOrientation(){
+  PORTRAIT = (typeof innerWidth!=='undefined') && innerWidth<innerHeight && innerWidth<900;
+  if(PORTRAIT){                     // 폰 세로: 내 구역이 아래, 상대가 위
+    COLS=15; ROWS=21;
+    ZONE=[{c0:1,c1:13,r0:11,r1:19},{c0:1,c1:13,r0:1,r1:9}];
+    SPAWN=[[[1,11],[13,19]],[[1,9],[13,1]]];
+  } else {                          // 가로: 내 구역 왼쪽
+    COLS=21; ROWS=15;
+    ZONE=[{c0:1,c1:9,r0:1,r1:13},{c0:11,c1:19,r0:1,r1:13}];
+    SPAWN=[[[1,1],[9,13]],[[19,1],[11,13]]];
+  }
+  W=COLS*TILE; H=ROWS*TILE;
+  if(cv){ cv.width=W; cv.height=H; }
+}
 const FUSE=2.4, WATER_LIFE=.5, TRAP=5.0, TAPS=9, INV=1.2;
 const BUB_LIFE=8.5;                 // 물방울이 저절로 풀리는 시간
 const COMBO_WINDOW=3.0, COMBO_GOAL=8;
@@ -325,8 +349,8 @@ let THORN_EVERY=4;
 const key2=(c,r)=>r*COLS+c;
 const inb=(c,r)=>c>=0&&c<COLS&&r>=0&&r<ROWS;
 const rnd=a=>a[(Math.random()*a.length)|0];
-const zoneOfCol=c=> c<WALL?0:1;
-function inZone(c,r,z){ return r>=1&&r<=ROWS-2 && c>=ZONE[z].c0 && c<=ZONE[z].c1; }
+
+function inZone(c,r,z){ const Z=ZONE[z]; return c>=Z.c0&&c<=Z.c1&&r>=Z.r0&&r<=Z.r1; }
 function tileOf(e){
   if(e.px!==undefined) return [(e.px/TILE)|0,(e.py/TILE)|0];
   return e.t<.5?[e.fc,e.fr]:[e.tc,e.tr];
@@ -475,64 +499,73 @@ function buildTerrain(pick){
   itemGrid=Array.from({length:ROWS},()=>new Array(COLS).fill(null));
   blastGrid=Array.from({length:ROWS},()=>new Array(COLS).fill(0));
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)
-    if(r===0||c===0||r===ROWS-1||c===COLS-1||c===WALL) grid[r][c]=1;
+    if(r===0||c===0||r===ROWS-1||c===COLS-1||isWall(c,r)) grid[r][c]=1;
 
-  const C0=ZONE[0].c0, C1=ZONE[0].c1, R0=1, R1=ROWS-2;
-  const safe=new Set();
-  for(const [sc,sr] of SPAWN[0])
-    for(const [dc,dr] of [[0,0],[1,0],[2,0],[0,1],[0,2],[1,1],[-1,0],[0,-1],[-1,-1],[-2,0],[0,-2]]){
-      const c=sc+dc,r=sr+dr; if(inZone(c,r,0)) safe.add(key2(c,r));
+  /* 지형 패턴은 로컬 9(폭)×13(높이) 좌표로 만들고,
+     가로 모드는 그대로, 세로 모드는 눕혀서(전치) 내 구역에 깐다 */
+  const LW=9, LH=13;
+  const loc=Array.from({length:LH},()=>new Array(LW).fill(0));
+  const lk=(u,v)=>v*LW+u;
+  const lsafe=new Set();
+  for(const [su,sv] of [[0,0],[LW-1,LH-1]])
+    for(const [du,dv] of [[0,0],[1,0],[2,0],[0,1],[0,2],[1,1],[-1,0],[0,-1],[-1,-1],[-2,0],[0,-2]]){
+      const u=su+(su===0?du:-du), v=sv+(sv===0?dv:-dv);
+      if(u>=0&&u<LW&&v>=0&&v<LH) lsafe.add(lk(u,v));
     }
 
-  /* ---- 기둥과 벽 (왼쪽 구역만 만들고 나중에 통째로 대칭 복사) ---- */
   let boxDensity=.32;
+  const pillar=(u,v)=> u%2===1&&v%2===1;
   if(pick==='field'){ boxDensity=.18; }
   else if(pick==='classic'){
-    for(let r=R0;r<=R1;r++)for(let c=C0;c<=C1;c++)
-      if(r%2===0&&c%2===0) grid[r][c]=1;
+    for(let v=0;v<LH;v++)for(let u=0;u<LW;u++) if(pillar(u,v)) loc[v][u]=1;
     boxDensity=.36;
   }
   else if(pick==='open'){
-    for(let r=R0;r<=R1;r++)for(let c=C0;c<=C1;c++)
-      if(r%2===0&&c%2===0&&Math.random()<.22) grid[r][c]=1;
+    for(let v=0;v<LH;v++)for(let u=0;u<LW;u++) if(pillar(u,v)&&Math.random()<.22) loc[v][u]=1;
     boxDensity=.24;
   }
   else if(pick==='lanes'){
-    for(const wr of [4,10]){
-      const g1=2+((Math.random()*3)|0), g2=6+((Math.random()*3)|0);   // 문 두 개
-      for(let c=C0;c<=C1;c++) if(c!==g1&&c!==g2) grid[wr][c]=1;
+    for(const wv of [3,9]){
+      const g1=1+((Math.random()*3)|0), g2=5+((Math.random()*3)|0);
+      for(let u=0;u<LW;u++) if(u!==g1&&u!==g2) loc[wv][u]=1;
     }
-    for(let r=R0;r<=R1;r++)for(let c=C0;c<=C1;c++)
-      if(r!==4&&r!==10&&r%2===0&&c%2===0&&Math.random()<.12) grid[r][c]=1;
+    for(let v=0;v<LH;v++)for(let u=0;u<LW;u++)
+      if(v!==3&&v!==9&&pillar(u,v)&&Math.random()<.12) loc[v][u]=1;
     boxDensity=.26;
   }
   else if(pick==='rooms'){
-    const vg1=2+((Math.random()*4)|0), vg2=8+((Math.random()*4)|0);   // 세로벽 문 (위/아래)
-    for(let r=R0;r<=R1;r++) if(r!==vg1&&r!==vg2) grid[r][5]=1;
-    const hg1=1+((Math.random()*3)|0), hg2=6+((Math.random()*3)|0);   // 가로벽 문 (좌/우)
-    for(let c=C0;c<=C1;c++) if(c!==hg1&&c!==hg2&&c!==5) grid[7][c]=1;
-    grid[7][5]=1;
-    for(let r=R0;r<=R1;r++)for(let c=C0;c<=C1;c++)
-      if(grid[r][c]===0&&r%2===0&&c%2===0&&Math.random()<.08) grid[r][c]=1;
+    const vg1=1+((Math.random()*4)|0), vg2=7+((Math.random()*4)|0);
+    for(let v=0;v<LH;v++) if(v!==vg1&&v!==vg2) loc[v][4]=1;
+    const hg1=0+((Math.random()*3)|0), hg2=5+((Math.random()*3)|0);
+    for(let u=0;u<LW;u++) if(u!==hg1&&u!==hg2&&u!==4) loc[6][u]=1;
+    loc[6][4]=1;
+    for(let v=0;v<LH;v++)for(let u=0;u<LW;u++)
+      if(loc[v][u]===0&&pillar(u,v)&&Math.random()<.08) loc[v][u]=1;
     boxDensity=.23;
   }
-  for(const k of safe){ const c=k%COLS, r=(k/COLS)|0; if(grid[r][c]===1&&c!==WALL) grid[r][c]=0; }
-
-  /* ---- 상자 ---- */
-  for(let r=R0;r<=R1;r++)for(let c=C0;c<=C1;c++){
-    if(grid[r][c]!==0||safe.has(key2(c,r))) continue;
-    if(Math.random()<boxDensity) grid[r][c]=2;
+  for(const k of lsafe){ const u=k%LW, v=(k/LW)|0; if(loc[v][u]===1) loc[v][u]=0; }
+  for(let v=0;v<LH;v++)for(let u=0;u<LW;u++){
+    if(loc[v][u]!==0||lsafe.has(lk(u,v))) continue;
+    if(Math.random()<boxDensity) loc[v][u]=2;
   }
 
-  /* ---- 오른쪽 구역에 통째로 대칭 복사 → 완전히 공평 ---- */
-  for(let r=R0;r<=R1;r++)for(let c=C0;c<=C1;c++) grid[r][MIRROR-c]=grid[r][c];
+  /* 내 구역에 배치 (세로 모드는 전치) → 상대 구역에 거울 복사 */
+  const Z=ZONE[0];
+  for(let v=0;v<LH;v++)for(let u=0;u<LW;u++){
+    const c = PORTRAIT ? Z.c0+v : Z.c0+u;
+    const r = PORTRAIT ? Z.r0+u : Z.r0+v;
+    grid[r][c]=loc[v][u];
+  }
+  for(let r=Z.r0;r<=Z.r1;r++)for(let c=Z.c0;c<=Z.c1;c++){
+    const [mc,mr]=mirrorTile(c,r); grid[mr][mc]=grid[r][c];
+  }
 }
 
 /* 스폰에서 못 가는 곳이 생기면 다시 만든다 (상자는 부술 수 있으니 통행 가능으로 본다) */
 function zoneConnected(){
   const [sc,sr]=SPAWN[0][0];
   const q=[[sc,sr]],seen=new Set([key2(sc,sr)]); let h=0,reach=0,total=0;
-  for(let r=1;r<ROWS-1;r++)for(let c=ZONE[0].c0;c<=ZONE[0].c1;c++) if(grid[r][c]!==1) total++;
+  for(let r=ZONE[0].r0;r<=ZONE[0].r1;r++)for(let c=ZONE[0].c0;c<=ZONE[0].c1;c++) if(grid[r][c]!==1) total++;
   while(h<q.length){ const [c,r]=q[h++]; reach++;
     for(const d of DL){ const [dc,dr]=DIRS[d],nc=c+dc,nr=r+dr,k=key2(nc,nr);
       if(seen.has(k)||!inZone(nc,nr,0)||grid[nr][nc]===1) continue;
@@ -546,7 +579,7 @@ function dropItem(c,r){
 }
 
 /* ---------- 엔티티 ---------- */
-const SPAWN=[[[1,1],[9,ROWS-2]],[[COLS-2,1],[11,ROWS-2]]];
+
 function makePlayer(idx,z,slot,kind,charId,name){
   const ch=CHARS.find(x=>x.id===charId)||CHARS[0];
   const [c,r]=SPAWN[z][slot];
@@ -565,7 +598,7 @@ function makeMob(z,type,c,r){
 }
 function freeSpot(z,minDist){
   const list=[];
-  for(let r=1;r<ROWS-1;r++)for(let c=ZONE[z].c0;c<=ZONE[z].c1;c++){
+  for(let r=ZONE[z].r0;r<=ZONE[z].r1;r++)for(let c=ZONE[z].c0;c<=ZONE[z].c1;c++){
     if(grid[r][c]!==0||balloonAt(c,r)||blastGrid[r][c]>0) continue;
     let ok=true;
     for(const p of players) if(p.zone===z&&p.alive){ const [pc,pr]=tileOf(p);
@@ -573,7 +606,7 @@ function freeSpot(z,minDist){
     if(ok) list.push([c,r]);
   }
   if(!list.length){
-    for(let r=1;r<ROWS-1;r++)for(let c=ZONE[z].c0;c<=ZONE[z].c1;c++){
+    for(let r=ZONE[z].r0;r<=ZONE[z].r1;r++)for(let c=ZONE[z].c0;c<=ZONE[z].c1;c++){
       if(grid[r][c]!==0||balloonAt(c,r)||blastGrid[r][c]>0) continue;
       let on=false;
       for(const pl of players) if(pl.zone===z&&pl.alive){ const [pc,pr]=tileOf(pl); if(pc===c&&pr===r) on=true; }
@@ -584,7 +617,7 @@ function freeSpot(z,minDist){
 }
 function itemSpot(z){
   const list=[];
-  for(let r=1;r<ROWS-1;r++)for(let c=ZONE[z].c0;c<=ZONE[z].c1;c++){
+  for(let r=ZONE[z].r0;r<=ZONE[z].r1;r++)for(let c=ZONE[z].c0;c<=ZONE[z].c1;c++){
     if(grid[r][c]!==0||itemGrid[r][c]||balloonAt(c,r)||blastGrid[r][c]>0) continue;
     list.push([c,r]);
   }
@@ -610,6 +643,7 @@ function startRound(){
   teams=[{score:0,caught:0,combo:0,comboT:0,best:0,gold:0,thorn:0,sendCnt:0},
           {score:0,caught:0,combo:0,comboT:0,best:0,gold:0,thorn:0,sendCnt:0}];
   THORN_EVERY = mode==='2v2'?7:4;
+  setOrientation();
   genMap();
 
   // 봇 캐릭터는 매판 랜덤 — 단, 사람과는 겹치지 않게
@@ -707,8 +741,22 @@ function bindPad(){
   bb.addEventListener('pointerdown',ev=>{ev.preventDefault();
     const p=players&&players.find(x=>x.kind==='human'); if(p)bomb(p)});
   bb.addEventListener('contextmenu',ev=>ev.preventDefault());
+  const nb=document.getElementById('needleBtn');
+  nb.addEventListener('pointerdown',ev=>{ev.preventDefault();
+    const p=players&&players.find(x=>x.kind==='human'); if(p)useNeedle(p)});
+  nb.addEventListener('contextmenu',ev=>ev.preventDefault());
   /* 게임 중에는 길게 눌러도 복사·선택 메뉴가 뜨지 않게 */
   document.addEventListener('contextmenu',ev=>{ if(running) ev.preventDefault(); });
+  /* 아이폰 더블탭 확대·핀치 확대 차단 */
+  document.addEventListener('dblclick',ev=>{ if(running) ev.preventDefault(); });
+  let lastTE=0;
+  document.addEventListener('touchend',ev=>{
+    if(!running) return;
+    const now=Date.now();
+    if(now-lastTE<350) ev.preventDefault();
+    lastTE=now;
+  },{passive:false});
+  document.addEventListener('gesturestart',ev=>{ if(running) ev.preventDefault(); });
 }
 
 /* ---------- 이동 ---------- */
@@ -1287,7 +1335,7 @@ function kill(p){
 }
 function revive(p){
   let best=[p.sc,p.sr],bd=1e9;
-  for(let r=1;r<ROWS-1;r++)for(let c=ZONE[p.zone].c0;c<=ZONE[p.zone].c1;c++){
+  for(let r=ZONE[p.zone].r0;r<=ZONE[p.zone].r1;r++)for(let c=ZONE[p.zone].c0;c<=ZONE[p.zone].c1;c++){
     if(grid[r][c]!==0||balloonAt(c,r)||blastGrid[r][c]>0) continue;
     if(mobs.some(m=>m.alive&&m.mtype==='thorn'&&man(tileOf(m),[c,r])<3)) continue;
     const d=Math.abs(c-p.sc)+Math.abs(r-p.sr); if(d<bd){bd=d;best=[c,r]}
@@ -1363,14 +1411,13 @@ function refreshBoard(){
   const el=document.getElementById('timer');
   el.textContent=`${Math.floor(clock/60)}:${String(Math.floor(clock%60)).padStart(2,'0')}`;
   el.classList.toggle('low',clock<20);
-  const bb=document.getElementById('bombBtn');
+  const nb=document.getElementById('needleBtn');
   const hp=players&&players.find(p2=>p2.kind==='human');
-  if(bb&&hp){
-    const nd = hp.trapped&&hp.needles>0;
-    if(nd!==bb.classList.contains('needle')){
-      bb.classList.toggle('needle',nd);
-      bb.textContent = nd?'바늘!':'물풍선';
-    }
+  if(nb&&hp){
+    const cnt=document.getElementById('ndc');
+    if(cnt&&cnt.textContent!==String(hp.needles)) cnt.textContent=hp.needles;
+    nb.classList.toggle('urgent', hp.trapped&&hp.needles>0);
+    nb.style.opacity = hp.needles>0?'':'.35';
   }
 }
 
@@ -1382,8 +1429,8 @@ function render(){
   ctx.save();
 
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-    const z=zoneOfCol(c);
-    const base = c===WALL ? '#0C2740' : z===0 ? ((c+r)%2?'#7A3A3A':'#8A4242') : ((c+r)%2?'#2F6B2C':'#377A32');
+    const z = inZone(c,r,0)?0 : inZone(c,r,1)?1 : -1;
+    const base = z===-1 ? '#0C2740' : z===0 ? ((c+r)%2?'#7A3A3A':'#8A4242') : ((c+r)%2?'#2F6B2C':'#377A32');
     ctx.fillStyle=base; ctx.fillRect(c*TILE,r*TILE,TILE,TILE);
   }
   ctx.strokeStyle='rgba(255,255,255,.05)';ctx.lineWidth=1;
@@ -1422,9 +1469,10 @@ function render(){
     const T=teams[z];
     if(phase==='play'&&T.combo>=2&&T.comboT>0){
       const cx=(ZONE[z].c0+ZONE[z].c1+1)/2*TILE;
+      const cy=(ZONE[z].r0+1.1)*TILE;
       const a=Math.min(1,T.comboT/1.2);
       const pop=1+Math.max(0,(T.comboT-(COMBO_WINDOW-.18)))*2.2;
-      ctx.save();ctx.globalAlpha=a;ctx.translate(cx,TILE*2.1);ctx.scale(pop,pop);
+      ctx.save();ctx.globalAlpha=a;ctx.translate(cx,cy);ctx.scale(pop,pop);
       ctx.font='900 26px Jua, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.lineWidth=6;ctx.strokeStyle='rgba(0,0,0,.55)';
       ctx.strokeText('×'+T.combo,0,0);
@@ -1436,14 +1484,15 @@ function render(){
 
   // 퍼펙트 경고
   for(let z=0;z<2;z++) if(perfectT[z]>0&&phase==='play'){
-    const x0=ZONE[z].c0*TILE, w=(ZONE[z].c1-ZONE[z].c0+1)*TILE;
-    ctx.strokeStyle= z===0?'#FFCE4A':'#FFCE4A'; ctx.lineWidth=6;
+    const Z=ZONE[z];
+    const x0=Z.c0*TILE, y0=Z.r0*TILE, w=(Z.c1-Z.c0+1)*TILE, h=(Z.r1-Z.r0+1)*TILE;
+    ctx.strokeStyle='#FFCE4A'; ctx.lineWidth=6;
     ctx.globalAlpha=.35+.35*Math.sin(tick*9);
-    ctx.strokeRect(x0+3,TILE+3,w-6,(ROWS-2)*TILE-6);
+    ctx.strokeRect(x0+3,y0+3,w-6,h-6);
     ctx.globalAlpha=1;
     ctx.font='900 26px Jua, sans-serif';ctx.fillStyle='#FFCE4A';
     ctx.textAlign='center';
-    ctx.fillText(Math.ceil(PERFECT_HOLD-perfectT[z]), x0+w/2, H/2);
+    ctx.fillText(Math.ceil(PERFECT_HOLD-perfectT[z]), x0+w/2, y0+h/2);
   }
   if(phase==='ready') drawReady();
 }
@@ -1662,8 +1711,8 @@ function drawReady(){
   ctx.font='700 15px Gothic A1, sans-serif';ctx.fillStyle='#BFE4FA';
   ctx.fillText('가둬놓고 → 몸으로 주우세요. 연달아 주우면 콤보!',W/2,H/2+76);
   ctx.font='700 13px Gothic A1, sans-serif';
-  ctx.fillStyle='#FFB3AA';ctx.fillText(mode==='2v2'?'우리 팀 구역':'내 구역',(ZONE[0].c0+ZONE[0].c1+1)/2*TILE,TILE*1.2);
-  ctx.fillStyle='#BEF29E';ctx.fillText('상대 구역',(ZONE[1].c0+ZONE[1].c1+1)/2*TILE,TILE*1.2);
+  ctx.fillStyle='#FFB3AA';ctx.fillText(mode==='2v2'?'우리 팀 구역':'내 구역',(ZONE[0].c0+ZONE[0].c1+1)/2*TILE,(ZONE[0].r0+.35)*TILE);
+  ctx.fillStyle='#BEF29E';ctx.fillText('상대 구역',(ZONE[1].c0+ZONE[1].c1+1)/2*TILE,(ZONE[1].r0+.35)*TILE);
 }
 
 /* ---------- 루프 ---------- */
@@ -1709,7 +1758,7 @@ function toHome(){ running=false; paused=false; musicStop();
   document.getElementById('home').style.display='block';
   document.getElementById('pad').classList.remove('on'); }
 function init(){
-  cv=document.getElementById('cv');cv.width=W;cv.height=H;ctx=cv.getContext('2d');
+  cv=document.getElementById('cv');ctx=cv.getContext('2d');setOrientation();
   buildChars(); bindPad();
   document.querySelectorAll('#modes .opt').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('#modes .opt').forEach(x=>x.classList.remove('on'));
