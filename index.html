@@ -132,6 +132,11 @@ canvas#cv{display:block;width:100%;height:auto;background:#12395C}
 .foot{text-align:center;font-size:11px;color:#6E93B0;margin-top:16px;line-height:1.7}
 
 /* ---------- 모바일 ---------- */
+/* 터치 시 텍스트 선택·복사 메뉴·돋보기 전부 차단 */
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input{-webkit-user-select:text;user-select:text}
+.bomb.needle{background:radial-gradient(circle at 34% 30%,#FFD3EA,#E8559B);border-color:#FFD3EA;box-shadow:0 6px 0 #A93A70}
+
 body{overscroll-behavior:none}
 .stage,#pad,.dk,.bomb{touch-action:none}
 #rot{display:none;position:fixed;top:0;left:0;right:0;z-index:60;background:rgba(255,206,74,.95);
@@ -672,15 +677,38 @@ function placeBalloon(p,c,r){
   balloons.push(b); sfx.place();
 }
 function bindPad(){
-  document.querySelectorAll('.dk').forEach(el=>{
-    const d=el.dataset.dir;
-    const on=ev=>{ev.preventDefault();el.classList.add('hit');const p=players&&players.find(x=>x.kind==='human');if(p)push(p,d)};
-    const off=ev=>{ev.preventDefault();el.classList.remove('hit');const p=players&&players.find(x=>x.kind==='human');if(p)pop(p,d)};
-    el.addEventListener('pointerdown',on);el.addEventListener('pointerup',off);
-    el.addEventListener('pointercancel',off);el.addEventListener('pointerleave',off);
-  });
-  document.getElementById('bombBtn').addEventListener('pointerdown',ev=>{ev.preventDefault();
+  /* 방향패드: 포인터를 잡아두고, 손가락이 어느 키 위에 있는지 추적한다
+     (키 경계에서 손가락이 살짝 밀려도 끊기지 않고, 길게 눌러도 복사 메뉴가 안 뜬다) */
+  const dpadEl=document.querySelector?document.querySelector('.dpad'):null;
+  let padPtr=null, padDir=null;
+  function setPadDir(d){
+    if(d===padDir) return;
+    const p=players&&players.find(x=>x.kind==='human');
+    document.querySelectorAll('.dk').forEach(k=>k.classList.toggle('hit',k.dataset.dir===d));
+    if(p){ if(padDir) pop(p,padDir); if(d) push(p,d); }
+    padDir=d;
+  }
+  function dirAt(x,y){
+    const el=document.elementFromPoint(x,y);
+    return (el&&el.classList&&el.classList.contains('dk'))?el.dataset.dir:null;
+  }
+  if(dpadEl){
+    dpadEl.addEventListener('pointerdown',ev=>{ ev.preventDefault();
+      padPtr=ev.pointerId; try{dpadEl.setPointerCapture(ev.pointerId)}catch(e){}
+      setPadDir(dirAt(ev.clientX,ev.clientY)); });
+    dpadEl.addEventListener('pointermove',ev=>{ if(ev.pointerId!==padPtr)return;
+      ev.preventDefault(); setPadDir(dirAt(ev.clientX,ev.clientY)); });
+    const end=ev=>{ if(ev.pointerId!==padPtr)return; padPtr=null; setPadDir(null); };
+    dpadEl.addEventListener('pointerup',end);
+    dpadEl.addEventListener('pointercancel',end);
+    dpadEl.addEventListener('contextmenu',ev=>ev.preventDefault());
+  }
+  const bb=document.getElementById('bombBtn');
+  bb.addEventListener('pointerdown',ev=>{ev.preventDefault();
     const p=players&&players.find(x=>x.kind==='human'); if(p)bomb(p)});
+  bb.addEventListener('contextmenu',ev=>ev.preventDefault());
+  /* 게임 중에는 길게 눌러도 복사·선택 메뉴가 뜨지 않게 */
+  document.addEventListener('contextmenu',ev=>{ if(running) ev.preventDefault(); });
 }
 
 /* ---------- 이동 ---------- */
@@ -1335,6 +1363,15 @@ function refreshBoard(){
   const el=document.getElementById('timer');
   el.textContent=`${Math.floor(clock/60)}:${String(Math.floor(clock%60)).padStart(2,'0')}`;
   el.classList.toggle('low',clock<20);
+  const bb=document.getElementById('bombBtn');
+  const hp=players&&players.find(p2=>p2.kind==='human');
+  if(bb&&hp){
+    const nd = hp.trapped&&hp.needles>0;
+    if(nd!==bb.classList.contains('needle')){
+      bb.classList.toggle('needle',nd);
+      bb.textContent = nd?'바늘!':'물풍선';
+    }
+  }
 }
 
 /* ---------- 그리기 ---------- */
